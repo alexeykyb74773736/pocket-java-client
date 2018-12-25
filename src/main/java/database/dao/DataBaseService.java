@@ -43,7 +43,7 @@ public class DataBaseService {
         return usersDao.get(id);
     }
 
-    public User getUserByName(String userName) {
+    public User getUser(String userName) {
         return usersDao.get(userName);
     }
 
@@ -70,6 +70,7 @@ public class DataBaseService {
     public void addMessage(long receiverId, long senderID, Message message) {
         messageDao.addSentMessage(senderID, message);
         messageDao.addReceivedMessage(receiverId, message);
+        System.out.println("BD addMessage "+ receiverId+" "+senderID+" "+message);
     }
 
     public List<Message> getChat(User user1, User user2){
@@ -82,5 +83,6 @@ public class DataBaseService {
 
     public void close(){
         usersDao.close();
+        messageDao.close();
     }
 }

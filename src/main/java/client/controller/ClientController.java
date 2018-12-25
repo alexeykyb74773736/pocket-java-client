@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import static client.utils.Common.showAlert;
+import java.io.IOException;
 
 public class ClientController {
     private static final Logger controllerLogger = LogManager.getLogger(ClientController.class);
@@ -31,9 +32,9 @@ public class ClientController {
     private static String token;
     private ChatViewController chatViewController;
 
-    private User receiver = null;
-    private User myUser = null;
-    private Connector conn = null;
+    private User receiver;
+    private User myUser;
+    private Connector conn;
     private List<Long> contactList;
     private List<CFXListElement> contactListOfCards;
 
@@ -44,6 +45,9 @@ public class ClientController {
     }
 
     private ClientController() {
+        receiver = null;
+        myUser = null;
+        conn = null;
     }
 
     public static ClientController getInstance() {
@@ -54,7 +58,7 @@ public class ClientController {
     }
 
     private void connect(String token) {
-        conn = new Connector(token, ClientController.getInstance());
+        conn = new Connector(token, getInstance());
     }
 
     public String getSenderName() {
@@ -66,8 +70,8 @@ public class ClientController {
         loadChat();
     }
 
-    public void setReceiver(String receiver) {
-        this.receiver = dbService.getUserByName(receiver);
+    public void setReceiver(String receiverName) {
+        this.receiver = dbService.getUser(receiverName);
         loadChat();
     }
 
@@ -96,6 +100,8 @@ public class ClientController {
                 try {
                     ServerResponse response = HTTPSRequest.getMySelf(token);
                     myUser = convertJSONToUser(response.getResponseJson());
+                    System.out.println("info myUser id "+myUser.getUid()+
+                            " acc name "+myUser.getAccount_name());
                 } catch (Exception e) {
                     controllerLogger.error("HTTPSRequest.getMySelf_error", e);
                 }
@@ -156,23 +162,31 @@ public class ClientController {
 
         String jsonMessage = new Gson().toJson(MTS);
         System.out.println(jsonMessage);
-        conn.getChatClient().send(jsonMessage);
+        try {
+            conn.getChatClient().send(jsonMessage);
 
-        dbService.addMessage(receiver.getUid(),
-                myUser.getUid(),
-                new Message(message, new Timestamp(System.currentTimeMillis()))
-        );
-        chatViewController.showMessage(myUser.getAccount_name(), message, new Timestamp(System.currentTimeMillis()), false);
+            dbService.addMessage(receiver.getUid(),
+                    myUser.getUid(),
+                    new Message(message, new Timestamp(System.currentTimeMillis()))
+            );
+            chatViewController.showMessage(myUser.getAccount_name(), message, new Timestamp(System.currentTimeMillis()), false);
+
+        } catch (IOException ex) {
+            showAlert("Потеряно соединение с сервером", Alert.AlertType.ERROR);
+            controllerLogger.error(ex);
+        }
 
     }
 
     private void loadChat() {
         List<Message> converstation = dbService.getChat(myUser, receiver);
         chatViewController.clearMessageWebView();
+
         for (Message message :
                 converstation) {
             chatViewController.showMessage(message.getSender().getAccount_name(), message.getText(), message.getTime(), false);
             contactListOfCards.get(getListIDbyUID(message.getSender().getUid())).setBody(message.getText());
+
         }
     }
 
@@ -186,8 +200,17 @@ public class ClientController {
     }
 
     public void disconnect() {
-        if (conn != null)
-            conn.getChatClient().close();
+        if (conn != null) {
+            conn.disconnect();
+            conn = null;
+        }
+        if (dbService != null) {
+            dbService.close();
+            dbService = null;
+        }
+        instance = null;
+        contactList = null;
+        contactListOfCards = null;
     }
 
     private Map<String, ContactListFromServer> convertContactListToMap(String jsonText) {
@@ -203,10 +226,17 @@ public class ClientController {
         Iterator it = contactList.iterator();
         while (it.hasNext()){
             Long id = (Long) it.next();
+            //TODO если разкомментировать с ними не работает. Не понятно почему.
+            /*if (id.equals(ClientController.getInstance().myUser.getUid())) {
+                continue;
+            }*/
             CFXListElement element = new CFXListElement();
             element.setUser(dbService.getUser(id));
+
             contactListOfCards.add(element);
+
         }
+
     }
 
     private void synchronizeContactList() {
@@ -245,7 +275,11 @@ public class ClientController {
     private User convertJSONToUser(String jsonText) {
         GsonBuilder builder = new GsonBuilder();
         Gson gson = builder.create();
-        return gson.fromJson(jsonText, User.class);
+        //TODO дебилизм, но пока с БД не разберемся так
+        System.out.println("новое АПИ MYSELFUSER "+jsonText);
+        String jsText="{\"u"+jsonText.substring(7);
+        System.out.println("переделано как старое АПИ MYSELFUSER "+jsText);
+        return gson.fromJson(jsText, User.class);
     }
 
     public void addContact(String contact) {
@@ -302,10 +336,6 @@ public class ClientController {
 
     public List<String> getAllUserNames() {
         return dbService.getAllUserNames();
-    }
-
-    public void dbServiceClose() {
-        if (dbService != null) dbService.close();
     }
 
     public String proceedRestorePassword(String email) {

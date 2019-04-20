@@ -1,7 +1,7 @@
 
 #menu {
     -fx-background-color: #3498DB;
-    -fx-background-image: url("../images/chat/Shape.png");
+
     -fx-background-repeat: no-repeat;
     -fx-background-position: center center;
 }
@@ -66,16 +66,19 @@
     -fx-faint-focus-color: transparent;
 }
 
-#contacts .tab-label {
-     -fx-graphic: url("../images/chat/contacts.png");
-     -fx-border-width: 0 0 5 0;
-     -fx-border-color: #3498DB #3498DB transparent #3498DB;
-     -fx-border-insets: 0;
-     -fx-border-style: solid;
-     -fx-font-weight: normal;
-     -fx-text-fill: #FFFFFF;
-     -fx-font-size: 14px;
-     -fx-font-family: Roboto;
+.root {
+    -tab-text-color: #FFFFFF;
+}
+
+.tab-label {
+    -fx-border-width: 0 0 5 0;
+    -fx-border-color: #3498DB #3498DB transparent #3498DB;
+    -fx-border-insets: 0;
+    -fx-border-style: solid;
+    -fx-font-weight: normal;
+    -fx-text-fill: -tab-text-color;
+    -fx-font-size: 14px;
+    -fx-font-family: Roboto;
 }
 
 .tab-header-background {
@@ -87,3 +90,11 @@
     -fx-background-color: #3498DB;
 }
 
+.hamburger StackPane{
+    -fx-background-color: white;
+}
+
+.btnCreateGroup {
+    -fx-background-color: #3498DB;
+    -fx-background-radius: 25px;
+}
